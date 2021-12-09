@@ -6,7 +6,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import javax.persistence.*;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @Entity
 @Getter
@@ -16,16 +18,14 @@ import java.util.Set;
 
 public class Order {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", nullable = false)
-    private Long id;
-    private Long clientId;
+    private UUID id;
+    private UUID clientId;
     private String product;
-    private int cumulativeQuantity;
+    private int quantity;
     private BigDecimal price;
     private Side side;
-    @OneToMany(mappedBy = "order", fetch = FetchType.LAZY,
+    @OneToMany(mappedBy = "order", fetch = FetchType.EAGER,
             cascade = CascadeType.ALL)
-    private Set<Leg> legs;
+    private List<Execution> executions;
 
 }
