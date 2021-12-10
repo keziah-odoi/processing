@@ -11,8 +11,4 @@ public class Execution {
     private String timestamp;
     private BigDecimal price;
     private Integer quantity;
-    @OneToMany(mappedBy = "order", fetch = FetchType.EAGER,
-            cascade = CascadeType.ALL)
-    @JoinColumn(name = "order_id", nullable = false)
-    private Order order;
 }

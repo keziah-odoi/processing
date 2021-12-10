@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-//@Entity
+@Entity
 @Getter
 @Setter
 @AllArgsConstructor
@@ -18,6 +18,8 @@ import java.util.UUID;
 
 public class Order {
     @Id
+    @Column(name = "id", nullable = false)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private UUID id;
     private UUID clientId;
     private String product;
@@ -26,6 +28,6 @@ public class Order {
     private Side side;
     @OneToMany(mappedBy = "order", fetch = FetchType.EAGER,
             cascade = CascadeType.ALL)
-    private List<Execution> executions;
+    private List<Leg> legs;
 
 }

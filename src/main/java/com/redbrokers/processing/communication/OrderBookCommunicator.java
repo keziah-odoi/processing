@@ -8,9 +8,9 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.Arrays;
 
-public class OrderBookConnectionController {
+public class OrderBookCommunicator {
     private static final RestTemplate restTemplate = new RestTemplate();
-    private static final Logger LOGGER = LoggerFactory.getLogger(OrderBookConnectionController.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(OrderBookCommunicator.class);
 
     public static Iterable<FullOrderBook> getOrderBooks(String exchangeURL) {
         String uri = exchangeURL + "/orderbook";
