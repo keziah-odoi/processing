@@ -1,60 +1,32 @@
 package com.redbrokers.processing.controller;
 
+import com.redbrokers.processing.OrderProcessing;
+import com.redbrokers.processing.dto.OrderRequestBody;
 import com.redbrokers.processing.service.OrderProcessingService;
 import lombok.Generated;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
 
 @RestController
-@RequiredArgsConstructor
-@RequestMapping("/api/v1/orderbook")
+@CrossOrigin("*")
+@RequestMapping("api/v1/orders")
 public class OrderProcessingController {
 
     private OrderProcessingService orderProcessingService;
-//    @Autowired
-//    public OrderProcessingController(OrderProcessingService orderProcessingService) {
-//
-//    }
 
-    @GetMapping("/")
-    public ResponseEntity<?> getFullOrderBooks() {
-        return orderProcessingService.getFullOrderBooks();
+    @Autowired
+    public OrderProcessingController(OrderProcessingService orderProcessingService) {
     }
 
-    @GetMapping("/{product}")
-    public ResponseEntity<?> getOrderBookByTicker(@PathVariable("product") String ticker){
-        return orderProcessingService.getOrderBooksByTicker();
-    }
+    @PostMapping("/create")
+    public void processOrderHandler(@RequestBody OrderRequestBody orderRequestBody) {
+        System.out.println(orderRequestBody);
 
-    @GetMapping("/{product}/buy")
-    public ResponseEntity<?> getOrderBookByTickerBought(@PathVariable("product") String ticker){
-        return orderProcessingService.getOrderBooksByTickerBought();
-    }
+   }
 
-    @GetMapping("/{product}/sell")
-    public ResponseEntity<?> getOrderBookByTickerSold(@PathVariable("product") String ticker){
-        return orderProcessingService.getOrderBooksByTickerSold();
-    }
-
-    @GetMapping("/{product}/open")
-    public ResponseEntity<?> getOrderBookOpen(@PathVariable("product") String ticker){
-        return orderProcessingService.getOrderBooksTickerOpen();
-    }
-
-    @GetMapping("/{product}/closed")
-    public ResponseEntity<?> getOrderBookClosed(@PathVariable("product") String ticker){
-        return orderProcessingService.getOrderBookTickerClosed();
-    }
-
-    @GetMapping("/{product}/cancelled")
-    public ResponseEntity<?> getOrderBookCancelled(@PathVariable("product") String ticker){
-        return orderProcessingService.getOrderBookTickerCancelled();
-    }
 
 
 }

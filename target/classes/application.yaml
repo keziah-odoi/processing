@@ -1,0 +1,13 @@
+order-processing:
+  variables:
+    urls:
+      exchange-service: http://localhost:8085/api/v1/exchange/orders
+
+server:
+  port: 9090
+
+spring:
+  mvc:
+    throw-exception-if-no-handler-found: true
+
+
