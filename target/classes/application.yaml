@@ -12,8 +12,13 @@ spring:
   mvc:
     throw-exception-if-no-handler-found: true
   datasource:
-    username: broker
+    username: postgres
+    password: postgres
     url: "jdbc:postgresql://localhost:5432/trading"
-    password: rouge_broker
+
+
+  jpa:
+    hibernate:
+      ddl:auto: create-drop
 
 private-key: 4319e1b9-895f-4157-b584-673bfecac0b6

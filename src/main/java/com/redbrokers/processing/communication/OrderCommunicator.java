@@ -11,7 +11,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-
 @Service
 public class OrderCommunicator {
     private static final Logger LOGGER = LoggerFactory.getLogger(OrderBookCommunicator.class);
@@ -45,17 +44,30 @@ public class OrderCommunicator {
         HttpEntity<OrderRequestBody> request = new HttpEntity<OrderRequestBody>(body, headers);
 
         ResponseEntity<String> response =
-                restTemplate.exchange(exchangeOneURL, HttpMethod.PUT, request, ParameterizedTypeReference.forType(Order.class));
+                restTemplate.exchange(exchangeOneURL, HttpMethod.PUT, request, ParameterizedTypeReference.forType(String.class));
         return response;
     }
 
-    public void deleteOrderRequest(String id) {
+    public ResponseEntity<?> cancelOrderRequest(String id) {
         String exchangeOneURL = exchangeOne + "/" + privateKey + "/order" + id;
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<OrderRequestBody> request =
                 new HttpEntity<OrderRequestBody>(headers);
-        restTemplate.delete(exchangeOneURL, request);
+//        restTemplate.delete(exchangeOneURL, request);
+        ResponseEntity<Boolean> response =
+                restTemplate.exchange(exchangeOneURL, HttpMethod.DELETE, request, ParameterizedTypeReference.forType(Boolean.class));
+        System.out.println(response);
+        return response;
     }
 
+    public ResponseEntity<?> getOrderByIdRequest(String id) {
+        String exchangeOneURL = exchangeOne + "/" + privateKey + "/order" + id;
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<OrderRequestBody> request =
+                new HttpEntity<OrderRequestBody>(headers);
+        ResponseEntity<?> response =restTemplate.exchange(exchangeOneURL, HttpMethod.GET, request, ParameterizedTypeReference.forType(Order.class));
+        return response;
+    }
 }
