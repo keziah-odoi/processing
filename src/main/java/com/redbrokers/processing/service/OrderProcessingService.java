@@ -3,15 +3,15 @@ package com.redbrokers.processing.service;
 import com.redbrokers.processing.communication.MarketDataCommunicator;
 import com.redbrokers.processing.communication.OrderBookCommunicator;
 import com.redbrokers.processing.communication.OrderCommunicator;
-import com.redbrokers.processing.dto.GroupedOrder;
-import com.redbrokers.processing.dto.OrderRequestBody;
-import com.redbrokers.processing.dto.Product;
-import com.redbrokers.processing.dto.SingleOrder;
+import com.redbrokers.processing.dto.*;
 import com.redbrokers.processing.enums.Side;
+import com.redbrokers.processing.enums.Status;
+import com.redbrokers.processing.model.Execution;
 import com.redbrokers.processing.model.Order;
 import com.redbrokers.processing.repository.OrderProcessingRepository;
 import lombok.NoArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -32,9 +32,16 @@ public class OrderProcessingService {
     private OrderProcessingRepository orderProcessingRepository;
     private OrderBookCommunicator orderBookCommunicator;
     private MarketDataCommunicator marketDataCommunicator;
-    private Map<String, GroupedOrder> productOrdersCache = new HashMap<>();
-    private List<Product> products = new ArrayList<>();
-    // private UUID clientId = UUID.fromString("b60479c7-b274-4110-b381-eeaca145a824");
+    private Map<String, GroupedOrder> productOrdersCacheOne = new HashMap<>();
+    private Map<String, GroupedOrder> productOrdersCacheTwo = new HashMap<>();
+    private List<Product> productsFromExchangeOne = new ArrayList<>();
+    private List<Product> productsFromExchangeTwo = new ArrayList<>();
+
+    @Value("${order-processing.variables.urls.exchange-one}")
+    private String exchangeOneURL;
+
+    @Value("${order-processing.variables.urls.exchange-two}")
+    private String exchangeTwoURL;
 
     @Autowired
     public OrderProcessingService(OrderCommunicator communicator, OrderProcessingRepository orderProcessingRepository, OrderBookCommunicator orderBookCommunicator, MarketDataCommunicator marketDataCommunicator) {
@@ -44,48 +51,124 @@ public class OrderProcessingService {
         this.marketDataCommunicator = marketDataCommunicator;
     }
 
-
     public Order createOrder(Order order) {
         return this.orderProcessingRepository.save(order);
     }
 
-
     public Iterable<SingleOrder> getOrdersBySideAndStatus(String url, String side, String product) throws HttpClientErrorException, HttpServerErrorException {
         return orderBookCommunicator.getOrdersBySideAndStatus(url, product, side);
-
     }
 
     @PostConstruct
-    public void openProductsFromExchange() {
-        this.products.addAll(marketDataCommunicator.getProductsFromExchange());
+    public void openProductsFromExchanges() {
+        this.productsFromExchangeOne.addAll(marketDataCommunicator.getProductsFromExchange(exchangeOneURL));
+        this.productsFromExchangeTwo.addAll(marketDataCommunicator.getProductsFromExchange(exchangeTwoURL));
     }
 
+    //check status
+    @Scheduled(initialDelay = 100, fixedDelay = 30000)
+    public void checkOrderStatus() {
+        List<Order> orders = this.orderProcessingRepository.getOrdersByStatus("NOT_EXECUTED");
+        List<Order> partiallyExedOrders = this.orderProcessingRepository.getOrdersByStatus("PARTIALLY_EXECUTED");
+        orders.addAll(partiallyExedOrders);
+        orders.forEach(order -> {
+                    try {
+                        ResponseEntity<SingleOrder> response = (ResponseEntity<SingleOrder>) communicator.getOrderByIdRequest(order.getOrderIdFromExchange());
+                        SingleOrder orderResp = response.getBody();
+                        if ((!orderResp.getCumulatitiveQuantity().equals(orderResp.getQuantity())
+                                &&
+                                !orderResp.getCumulatitiveQuantity().equals(0))) {
+                            order.setStatus(Status.PARTIALLY_EXECUTED.name());
+                            this.orderProcessingRepository.save(order);
+                        } else {
+                            order.setStatus(Status.NOT_EXECUTED.name());
+                            this.orderProcessingRepository.save(order);
+                        }
+                    } catch (HttpClientErrorException e) {
+                        System.out.println(e.getMessage());
+                    } catch (HttpServerErrorException e) {
+                        order.setStatus(Status.FULLY_EXECUTED.name());
+                        this.orderProcessingRepository.save(order);
+                    }
+                }
+
+        );
+    }
+    //do multileg
+
+
     @Scheduled(initialDelay = 100, fixedDelay = 1000)
-    public void populateOrderBookCache() {
-        System.out.println("populating order book cache");
-        for (Product product : this.products) {
-            System.out.println("populating : " + product.getTicker());
-            GroupedOrder groupedOrder = new GroupedOrder();
-            groupedOrder.setTicker(product.getTicker());
+    public void populateCaches() {
+        this.populateOrderBookOneCache(exchangeOneURL);
+        this.populateOrderBookTwoCache(exchangeTwoURL);
+    }
 
-            List<SingleOrder> ordersByTickerAndStatus = (List<SingleOrder>) getOrdersBySideAndStatus("https://exchange.matraining.com", "open", product.getTicker());
-            Map<Side, List<SingleOrder>> groupedOrdersBySide = ordersByTickerAndStatus.stream().collect(groupingBy(SingleOrder::getSide));
-
-            groupedOrder.setSingleOrdersBuy(groupedOrdersBySide.get(Side.BUY));
-            groupedOrder.setSingleOrdersSell(groupedOrdersBySide.get(Side.SELL));
-            this.productOrdersCache.put(product.getTicker(), groupedOrder);
+    public void populateOrderBookOneCache(String url) {
+        System.out.println("populating order book one cache");
+        for (Product product : this.productsFromExchangeOne) {
+            this.getCacheData(product.getTicker(), url, this.productOrdersCacheOne);
 
         }
     }
 
-    public Double computeMinBidPriceForProduct(String product) {
-        OptionalDouble minPrice = this.productOrdersCache.get(product).getSingleOrdersBuy().stream().mapToDouble(SingleOrder::getPrice).min();
-        return minPrice.orElse(0.0);
+    public void populateOrderBookTwoCache(String url) {
+        System.out.println("populating order book two cache");
+        for (Product product : this.productsFromExchangeTwo) {
+            this.getCacheData(product.getTicker(), url, this.productOrdersCacheTwo);
+        }
     }
 
-    public Double computeMaxAskPriceForProduct(String product) {
-        OptionalDouble maxPrice = this.productOrdersCache.get(product).getSingleOrdersSell().stream().mapToDouble( SingleOrder::getPrice).max();
-        return maxPrice.orElse(0.0);
+    public void getCacheData(String product, String url, Map<String, GroupedOrder> cache) {
+        GroupedOrder groupedOrder = new GroupedOrder();
+        groupedOrder.setTicker(product);
+        List<SingleOrder> ordersByTickerAndStatus = (List<SingleOrder>) getOrdersBySideAndStatus(url, "open", product);
+        Map<Side, List<SingleOrder>> groupedOrdersBySide = ordersByTickerAndStatus.stream().collect(groupingBy(SingleOrder::getSide));
+        groupedOrder.setSingleOrdersBuy(groupedOrdersBySide.get(Side.BUY));
+        groupedOrder.setSingleOrdersSell(groupedOrdersBySide.get(Side.SELL));
+        cache.put(product, groupedOrder);
+    }
+
+
+    public ComputedPriceFromExchange computeMinBidPriceForProduct(String product) {
+        OptionalDouble minPrice1 = this.productOrdersCacheOne.get(product).getSingleOrdersBuy().stream().mapToDouble(SingleOrder::getPrice).min();
+        OptionalDouble minPrice2 = this.productOrdersCacheTwo.get(product).getSingleOrdersBuy().stream().mapToDouble(SingleOrder::getPrice).min();
+        if (minPrice1.isPresent() && minPrice2.isPresent()) {
+            ComputedPriceFromExchange computedPriceFromExchange;
+            if (minPrice2.getAsDouble() < minPrice1.getAsDouble()) {
+                computedPriceFromExchange = new ComputedPriceFromExchange();
+                computedPriceFromExchange.setExchangeOneURL(exchangeTwoURL);
+                computedPriceFromExchange.setSelectedPrice(minPrice2.getAsDouble());
+                computedPriceFromExchange.setSide(Side.BUY);
+            } else {
+                computedPriceFromExchange = new ComputedPriceFromExchange();
+                computedPriceFromExchange.setExchangeOneURL(exchangeOneURL);
+                computedPriceFromExchange.setSelectedPrice(minPrice1.getAsDouble());
+                computedPriceFromExchange.setSide(Side.BUY);
+            }
+            return computedPriceFromExchange;
+        }
+        return null;
+    }
+
+    public ComputedPriceFromExchange computeMaxAskPriceForProduct(String product) {
+        OptionalDouble maxPrice1 = this.productOrdersCacheOne.get(product).getSingleOrdersBuy().stream().mapToDouble(SingleOrder::getPrice).max();
+        OptionalDouble maxPrice2 = this.productOrdersCacheTwo.get(product).getSingleOrdersBuy().stream().mapToDouble(SingleOrder::getPrice).max();
+        if (maxPrice1.isPresent() && maxPrice2.isPresent()) {
+            ComputedPriceFromExchange computedPriceFromExchange;
+            if (maxPrice2.getAsDouble() > maxPrice1.getAsDouble()) {
+                computedPriceFromExchange = new ComputedPriceFromExchange();
+                computedPriceFromExchange.setExchangeOneURL(exchangeTwoURL);
+                computedPriceFromExchange.setSelectedPrice(maxPrice2.getAsDouble());
+                computedPriceFromExchange.setSide(Side.SELL);
+            } else {
+                computedPriceFromExchange = new ComputedPriceFromExchange();
+                computedPriceFromExchange.setExchangeOneURL(exchangeOneURL);
+                computedPriceFromExchange.setSelectedPrice(maxPrice1.getAsDouble());
+                computedPriceFromExchange.setSide(Side.SELL);
+            }
+            return computedPriceFromExchange;
+        }
+        return null;
     }
 
 
@@ -99,15 +182,21 @@ public class OrderProcessingService {
         order.setQuantity(orderRequestBody.getQuantity());
         order.setClientId(orderRequestBody.getClientId());
         order.setOrderIdFromExchange(idFromExchange);
+        ComputedPriceFromExchange price;
         if (orderRequestBody.getSide() == Side.BUY) {
-            order.setPrice(computeMinBidPriceForProduct(orderRequestBody.getProduct()));
+            price = computeMinBidPriceForProduct(orderRequestBody.getProduct());
+            //            System.out.println(computeMinBidPriceForProduct(order.getProduct()));
+        } else {
+            price = computeMaxAskPriceForProduct(order.getProduct());
+            //            System.out.println(computeMaxAskPriceForProduct(order.getProduct()));
         }
-        else {
-            order.setPrice(computeMaxAskPriceForProduct(order.getProduct()));
-        }
+        order.setPrice(price.getSelectedPrice());
+        order.setExchange(price.getExchangeOneURL());
+        order.setStatus(Status.NOT_EXECUTED.name());
         createOrder(order);
         return new ResponseEntity<>(idFromExchange, HttpStatus.OK);
     }
+
 
     public ResponseEntity<?> updateOrder(OrderRequestBody orderRequestBody, String id) {
         ResponseEntity<String> responseFromExchange = communicator.updateOrderRequest(orderRequestBody, id);
@@ -116,7 +205,6 @@ public class OrderProcessingService {
 
     public ResponseEntity<?> cancelOrder(String id) {
         return communicator.cancelOrderRequest(id);
-
     }
 
     public ResponseEntity<?> getOrderById(String orderId) {

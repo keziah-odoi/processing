@@ -17,11 +17,11 @@ public class MarketDataCommunicator {
     @Value("${order-processing.variables.urls.exchange-two}")
     private String exchangeTwo;
 
-    public List<Product> getProductsFromExchange() {
-        String exchangeOneURL = exchangeOne + "/md";
+    public List<Product> getProductsFromExchange(String url ) {
+        String exchangeURL = url + "/md";
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        Product[] products = restTemplate.getForObject(exchangeOneURL, Product[].class);
+        Product[] products = restTemplate.getForObject(exchangeURL, Product[].class);
         return Arrays.asList(products);
     }
 }

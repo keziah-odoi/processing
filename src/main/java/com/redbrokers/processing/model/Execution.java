@@ -17,6 +17,8 @@ public class Execution {
     private String timestamp;
     private Double price;
     private Integer quantity;
+    private String exchange;
+
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "order_id", nullable = false)

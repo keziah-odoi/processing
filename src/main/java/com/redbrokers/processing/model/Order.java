@@ -1,5 +1,6 @@
 package com.redbrokers.processing.model;
 import com.redbrokers.processing.enums.Side;
+import com.redbrokers.processing.enums.Status;
 import lombok.*;
 
 import javax.persistence.*;
@@ -25,6 +26,7 @@ public class Order {
     private UUID clientId;
     private String product;
     private int quantity;
+    @Column(name = "price",length=8,precision=2)
     private Double price;
     private String side;
     private LocalDateTime time;
@@ -32,6 +34,8 @@ public class Order {
             cascade = CascadeType.ALL)
     private List<Execution> executions;
     private String orderIdFromExchange;
+    private String exchange;
+    private String status;
 
 
     @PrePersist

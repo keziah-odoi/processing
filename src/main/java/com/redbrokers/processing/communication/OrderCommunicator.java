@@ -1,6 +1,7 @@
 package com.redbrokers.processing.communication;
 
 import com.redbrokers.processing.dto.OrderRequestBody;
+import com.redbrokers.processing.dto.SingleOrder;
 import com.redbrokers.processing.model.Order;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +39,7 @@ public class OrderCommunicator {
 
 
     public ResponseEntity<String> updateOrderRequest(OrderRequestBody body, String orderIdFromExchange) {
-        String exchangeOneURL = exchangeOne + "/" + privateKey + "/order" + orderIdFromExchange;
+        String exchangeOneURL = exchangeOne + "/" + privateKey + "/order/" + orderIdFromExchange;
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<OrderRequestBody> request = new HttpEntity<OrderRequestBody>(body, headers);
@@ -49,7 +50,7 @@ public class OrderCommunicator {
     }
 
     public ResponseEntity<?> cancelOrderRequest(String id) {
-        String exchangeOneURL = exchangeOne + "/" + privateKey + "/order" + id;
+        String exchangeOneURL = exchangeOne + "/" + privateKey + "/order/" + id;
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<OrderRequestBody> request =
@@ -62,12 +63,12 @@ public class OrderCommunicator {
     }
 
     public ResponseEntity<?> getOrderByIdRequest(String id) {
-        String exchangeOneURL = exchangeOne + "/" + privateKey + "/order" + id;
+        String exchangeOneURL = exchangeOne + "/" + privateKey + "/order/" + id;
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<OrderRequestBody> request =
                 new HttpEntity<OrderRequestBody>(headers);
-        ResponseEntity<?> response =restTemplate.exchange(exchangeOneURL, HttpMethod.GET, request, ParameterizedTypeReference.forType(Order.class));
+        ResponseEntity<?> response =restTemplate.exchange(exchangeOneURL, HttpMethod.GET, request, ParameterizedTypeReference.forType(SingleOrder.class));
         return response;
     }
 }
