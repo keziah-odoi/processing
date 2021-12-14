@@ -25,7 +25,7 @@ public class Order {
     private UUID clientId;
     private String product;
     private int quantity;
-    private BigDecimal price;
+    private Double price;
     private String side;
     private LocalDateTime time;
     @OneToMany(mappedBy = "order", fetch = FetchType.EAGER,

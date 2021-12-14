@@ -16,7 +16,7 @@ import java.util.List;
 public class SingleOrder {
 
     private String product;
-    private BigDecimal price;
+    private Double price;
     private Integer quantity;
     private Side side;
     private Integer cumulatitiveQuantity;

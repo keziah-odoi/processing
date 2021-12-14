@@ -15,7 +15,7 @@ public class Execution {
     private Long id;
 
     private String timestamp;
-    private BigDecimal price;
+    private Double price;
     private Integer quantity;
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)

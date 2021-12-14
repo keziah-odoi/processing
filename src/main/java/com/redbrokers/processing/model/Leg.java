@@ -21,6 +21,6 @@ public class Leg {
     private String idFromExchange;
     private String product;
     private int quantity;
-    private BigDecimal price;
+    private Double price;
     private Side side;
 }
