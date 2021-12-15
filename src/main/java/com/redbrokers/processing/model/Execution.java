@@ -6,14 +6,15 @@ import lombok.Setter;
 import javax.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
+
 @Entity
 @Getter
 @Setter
 public class Execution {
     @Id
     @Column(name = "id", nullable = false)
-    private Long id;
-
+    private UUID id;
     private String timestamp;
     private Double price;
     private Integer quantity;

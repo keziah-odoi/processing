@@ -129,42 +129,54 @@ public class OrderProcessingService {
     }
 
 
-    public ComputedPriceFromExchange computeMinBidPriceForProduct(String product) {
-        OptionalDouble minPrice1 = this.productOrdersCacheOne.get(product).getSingleOrdersBuy().stream().mapToDouble(SingleOrder::getPrice).min();
-        OptionalDouble minPrice2 = this.productOrdersCacheTwo.get(product).getSingleOrdersBuy().stream().mapToDouble(SingleOrder::getPrice).min();
-        if (minPrice1.isPresent() && minPrice2.isPresent()) {
-            ComputedPriceFromExchange computedPriceFromExchange;
-            if (minPrice2.getAsDouble() < minPrice1.getAsDouble()) {
-                computedPriceFromExchange = new ComputedPriceFromExchange();
+    public ComputedPriceAndQuantityFromExchange computeMaxBidPriceForProduct(String product) {
+        OptionalDouble maxPrice1 = this.productOrdersCacheOne.get(product).getSingleOrdersBuy().stream().mapToDouble(SingleOrder::getPrice).max();
+        OptionalDouble maxPrice2 = this.productOrdersCacheTwo.get(product).getSingleOrdersBuy().stream().mapToDouble(SingleOrder::getPrice).max();
+        if (maxPrice1.isPresent() && maxPrice2.isPresent()) {
+            ComputedPriceAndQuantityFromExchange computedPriceFromExchange;
+            if (maxPrice2.getAsDouble() > maxPrice1.getAsDouble()) {
+                computedPriceFromExchange = new ComputedPriceAndQuantityFromExchange();
                 computedPriceFromExchange.setExchangeOneURL(exchangeTwoURL);
-                computedPriceFromExchange.setSelectedPrice(minPrice2.getAsDouble());
+                computedPriceFromExchange.setSelectedPrice(maxPrice2.getAsDouble());
                 computedPriceFromExchange.setSide(Side.BUY);
+                int rawQuantity = this.productOrdersCacheTwo.get(product).getSingleOrdersBuy().stream().mapToInt(SingleOrder::getQuantity).sum();
+                int cumulatitiveQuantity = this.productOrdersCacheTwo.get(product).getSingleOrdersBuy().stream().mapToInt(SingleOrder::getCumulatitiveQuantity).sum();
+                computedPriceFromExchange.setQuantity(rawQuantity-cumulatitiveQuantity);
             } else {
-                computedPriceFromExchange = new ComputedPriceFromExchange();
+                computedPriceFromExchange = new ComputedPriceAndQuantityFromExchange();
                 computedPriceFromExchange.setExchangeOneURL(exchangeOneURL);
-                computedPriceFromExchange.setSelectedPrice(minPrice1.getAsDouble());
+                computedPriceFromExchange.setSelectedPrice(maxPrice1.getAsDouble());
                 computedPriceFromExchange.setSide(Side.BUY);
+                int rawQuantity = this.productOrdersCacheOne.get(product).getSingleOrdersBuy().stream().mapToInt(SingleOrder::getQuantity).sum();
+                int cumulatitiveQuantity = this.productOrdersCacheOne.get(product).getSingleOrdersBuy().stream().mapToInt(SingleOrder::getCumulatitiveQuantity).sum();
+                computedPriceFromExchange.setQuantity(rawQuantity-cumulatitiveQuantity);
             }
             return computedPriceFromExchange;
         }
         return null;
     }
 
-    public ComputedPriceFromExchange computeMaxAskPriceForProduct(String product) {
-        OptionalDouble maxPrice1 = this.productOrdersCacheOne.get(product).getSingleOrdersBuy().stream().mapToDouble(SingleOrder::getPrice).max();
-        OptionalDouble maxPrice2 = this.productOrdersCacheTwo.get(product).getSingleOrdersBuy().stream().mapToDouble(SingleOrder::getPrice).max();
-        if (maxPrice1.isPresent() && maxPrice2.isPresent()) {
-            ComputedPriceFromExchange computedPriceFromExchange;
-            if (maxPrice2.getAsDouble() > maxPrice1.getAsDouble()) {
-                computedPriceFromExchange = new ComputedPriceFromExchange();
+    public ComputedPriceAndQuantityFromExchange computeMinAskPriceForProduct(String product) {
+        OptionalDouble minPrice1 = this.productOrdersCacheOne.get(product).getSingleOrdersSell().stream().mapToDouble(SingleOrder::getPrice).min();
+        OptionalDouble minPrice2 = this.productOrdersCacheTwo.get(product).getSingleOrdersSell().stream().mapToDouble(SingleOrder::getPrice).min();
+        if (minPrice1.isPresent() && minPrice2.isPresent()) {
+            ComputedPriceAndQuantityFromExchange computedPriceFromExchange;
+            if (minPrice2.getAsDouble() < minPrice1.getAsDouble()) {
+                computedPriceFromExchange = new ComputedPriceAndQuantityFromExchange();
                 computedPriceFromExchange.setExchangeOneURL(exchangeTwoURL);
-                computedPriceFromExchange.setSelectedPrice(maxPrice2.getAsDouble());
+                computedPriceFromExchange.setSelectedPrice(minPrice2.getAsDouble());
                 computedPriceFromExchange.setSide(Side.SELL);
+                int rawQuantity = this.productOrdersCacheTwo.get(product).getSingleOrdersSell().stream().mapToInt(SingleOrder::getQuantity).sum();
+                int cumulatitiveQuantity = this.productOrdersCacheTwo.get(product).getSingleOrdersSell().stream().mapToInt(SingleOrder::getCumulatitiveQuantity).sum();
+                computedPriceFromExchange.setQuantity(rawQuantity-cumulatitiveQuantity);
             } else {
-                computedPriceFromExchange = new ComputedPriceFromExchange();
+                computedPriceFromExchange = new ComputedPriceAndQuantityFromExchange();
                 computedPriceFromExchange.setExchangeOneURL(exchangeOneURL);
-                computedPriceFromExchange.setSelectedPrice(maxPrice1.getAsDouble());
+                computedPriceFromExchange.setSelectedPrice(minPrice1.getAsDouble());
                 computedPriceFromExchange.setSide(Side.SELL);
+                int rawQuantity = this.productOrdersCacheOne.get(product).getSingleOrdersSell().stream().mapToInt(SingleOrder::getQuantity).sum();
+                int cumulatitiveQuantity = this.productOrdersCacheOne.get(product).getSingleOrdersSell().stream().mapToInt(SingleOrder::getCumulatitiveQuantity).sum();
+                computedPriceFromExchange.setQuantity(rawQuantity-cumulatitiveQuantity);
             }
             return computedPriceFromExchange;
         }
@@ -182,16 +194,16 @@ public class OrderProcessingService {
         order.setQuantity(orderRequestBody.getQuantity());
         order.setClientId(orderRequestBody.getClientId());
         order.setOrderIdFromExchange(idFromExchange);
-        ComputedPriceFromExchange price;
-        if (orderRequestBody.getSide() == Side.BUY) {
-            price = computeMinBidPriceForProduct(orderRequestBody.getProduct());
+        ComputedPriceAndQuantityFromExchange priceAndQuantityFromExchange;
+        if (orderRequestBody.getSide() == Side.SELL) {
+            priceAndQuantityFromExchange = computeMaxBidPriceForProduct(orderRequestBody.getProduct());
             //            System.out.println(computeMinBidPriceForProduct(order.getProduct()));
         } else {
-            price = computeMaxAskPriceForProduct(order.getProduct());
-            //            System.out.println(computeMaxAskPriceForProduct(order.getProduct()));
+            priceAndQuantityFromExchange = computeMinAskPriceForProduct(order.getProduct());
+            //            System.out.println(computeMinAskPriceForProduct(order.getProduct()));
         }
-        order.setPrice(price.getSelectedPrice());
-        order.setExchange(price.getExchangeOneURL());
+        order.setPrice(priceAndQuantityFromExchange.getSelectedPrice());
+        order.setExchange(priceAndQuantityFromExchange.getExchangeOneURL());
         order.setStatus(Status.NOT_EXECUTED.name());
         createOrder(order);
         return new ResponseEntity<>(idFromExchange, HttpStatus.OK);
