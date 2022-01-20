@@ -4,6 +4,7 @@ order-processing:
       exchange-service: http://localhost:8085/api/v1/exchange/orders
       exchange-one: https://exchange.matraining.com
       exchange-two: https://exchange2.matraining.com
+      exchange-urls: https://exchange.matraining.com,https://exchange2.matraining.com
 
 server:
   port: 9090
@@ -12,8 +13,13 @@ spring:
   mvc:
     throw-exception-if-no-handler-found: true
   datasource:
-    username: broker
+    username: postgres
+    password: postgres
     url: "jdbc:postgresql://localhost:5432/trading"
-    password: rouge_broker
+
+
+  jpa:
+    hibernate:
+      ddl:auto: update
 
 private-key: 4319e1b9-895f-4157-b584-673bfecac0b6

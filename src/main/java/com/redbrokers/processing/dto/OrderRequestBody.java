@@ -6,6 +6,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+import java.util.UUID;
+
 @Getter
 @Setter
 @AllArgsConstructor
@@ -13,9 +16,9 @@ import lombok.Setter;
 public class OrderRequestBody {
     private String product;
     private Integer quantity;
-    private Double price;
+    private BigDecimal price;
     private Side side;
-
+    private UUID clientId;
 
 
     @Override
@@ -25,6 +28,7 @@ public class OrderRequestBody {
                 ", quantity=" + quantity +
                 ", price=" + price +
                 ", side=" + side +
+                ", clientId=" + clientId +
                 '}';
     }
 }

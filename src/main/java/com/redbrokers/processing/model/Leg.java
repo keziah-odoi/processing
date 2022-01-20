@@ -7,7 +7,7 @@ import javax.persistence.*;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-@Entity
+//@Entity
 @Getter
 @Setter
 @AllArgsConstructor
@@ -21,10 +21,6 @@ public class Leg {
     private String idFromExchange;
     private String product;
     private int quantity;
-    private BigDecimal price;
+    private Double price;
     private Side side;
-    @ManyToOne(fetch = FetchType.EAGER, optional = false)
-    @JoinColumn(name = "order_id", nullable = false)
-    private Order order;
-
 }
